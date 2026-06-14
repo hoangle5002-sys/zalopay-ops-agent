@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZaloPay Merchant Support</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #0068ff 0%, #0052cc 100%);
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+
+    .header-logo {
+      width: 44px;
+      height: 44px;
+      background: #fff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 16px;
+      color: #0068ff;
+      letter-spacing: -1px;
+    }
+
+    .header-info h1 {
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .header-info p {
+      font-size: 12px;
+      opacity: 0.85;
+      margin-top: 2px;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      background: #4cde80;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── Domain chips ─────────────────────────────────────────────────── */
+    .domains-bar {
+      background: #fff;
+      border-bottom: 1px solid #e4e7ec;
+      padding: 10px 24px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .domain-chip {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: #f0f2f5;
+      color: #555;
+      border: 1px solid #dde0e7;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .domain-chip:hover {
+      background: #e6eeff;
+      border-color: #0068ff;
+      color: #0068ff;
+    }
+
+    /* ── Chat area ────────────────────────────────────────────────────── */
+    .chat-wrapper {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 0 24px;
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+
+    #messages::-webkit-scrollbar { width: 5px; }
+    #messages::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+    /* ── Message bubbles ─────────────────────────────────────────────── */
+    .message {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      max-width: 82%;
+      animation: slideIn 0.25s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user { align-self: flex-end; flex-direction: row-reverse; }
+    .message.bot  { align-self: flex-start; }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .message.user .avatar { background: #0068ff; color: #fff; }
+    .message.bot  .avatar { background: #e8f0fe; color: #0068ff; }
+
+    .bubble {
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 13.5px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message.user .bubble {
+      background: #0068ff;
+      color: #fff;
+      border-top-right-radius: 4px;
+    }
+
+    .message.bot .bubble {
+      background: #fff;
+      color: #2c2c2c;
+      border-top-left-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .message.bot.escalated .bubble {
+      border-left: 3px solid #ff4d4f;
+      background: #fff8f8;
+    }
+
+    .message.bot.out-of-scope .bubble {
+      border-left: 3px solid #f5a623;
+      background: #fffbf0;
+    }
+
+    .flow-badge {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-auto       { background: #e6f7ee; color: #1a8a4a; }
+    .badge-escalated  { background: #fff1f0; color: #cf1322; }
+    .badge-outofscope { background: #fff7e6; color: #d46b08; }
+
+    .timestamp {
+      font-size: 10px;
+      color: #aaa;
+      margin-top: 4px;
+      text-align: right;
+    }
+
+    .message.bot .timestamp { text-align: left; }
+
+    /* ── Typing indicator ────────────────────────────────────────────── */
+    .typing-indicator {
+      display: flex;
+      gap: 5px;
+      padding: 10px 14px;
+      background: #fff;
+      border-radius: 16px;
+      border-top-left-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      width: fit-content;
+    }
+
+    .typing-indicator span {
+      width: 7px;
+      height: 7px;
+      background: #b0b7c3;
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30%            { transform: translateY(-6px); }
+    }
+
+    /* ── Input area ──────────────────────────────────────────────────── */
+    .input-area {
+      background: #fff;
+      border-top: 1px solid #e4e7ec;
+      padding: 14px 24px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+
+    #userInput {
+      flex: 1;
+      border: 1.5px solid #dde0e7;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 13.5px;
+      resize: none;
+      min-height: 44px;
+      max-height: 120px;
+      outline: none;
+      font-family: inherit;
+      color: #2c2c2c;
+      transition: border-color 0.2s;
+      line-height: 1.5;
+    }
+
+    #userInput:focus { border-color: #0068ff; }
+    #userInput::placeholder { color: #b0b7c3; }
+
+    #sendBtn {
+      width: 44px;
+      height: 44px;
+      background: #0068ff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    #sendBtn:hover  { background: #0052cc; }
+    #sendBtn:active { transform: scale(0.95); }
+    #sendBtn:disabled { background: #b0b7c3; cursor: not-allowed; }
+
+    #sendBtn svg { width: 18px; height: 18px; fill: #fff; }
+
+    /* ── Welcome card ────────────────────────────────────────────────── */
+    .welcome-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px 22px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      max-width: 500px;
+      align-self: center;
+      text-align: center;
+    }
+
+    .welcome-card h2 { font-size: 16px; color: #0068ff; margin-bottom: 6px; }
+    .welcome-card p  { font-size: 13px; color: #555; line-height: 1.6; }
+
+    /* ── Responsive ──────────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      header, .domains-bar, .chat-wrapper, .input-area { padding-left: 14px; padding-right: 14px; }
+      .message { max-width: 95%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="header-logo">ZP</div>
+  <div class="header-info">
+    <h1>ZaloPay Merchant Support</h1>
+    <p><span class="status-dot"></span>Hỗ trợ tự động &nbsp;·&nbsp; Phản hồi tức thì</p>
+  </div>
+</header>
+
+<!-- Domain quick-select bar -->
+<div class="domains-bar">
+  <span class="domain-chip" onclick="quickAsk('Quy trình onboarding và tích hợp Sandbox theo Quy định 2345')">Onboarding &amp; Sandbox</span>
+  <span class="domain-chip" onclick="quickAsk('Xử lý lỗi dòng tiền và cập nhật tài khoản thụ hưởng khi số dư bằng 0')">Lỗi dòng tiền</span>
+  <span class="domain-chip" onclick="quickAsk('Quy trình tiếp nhận tra soát và hoàn tiền hàng loạt cho đối tác')">Tra soát &amp; hoàn tiền</span>
+  <span class="domain-chip" onclick="quickAsk('Tài khoản merchant bị khóa ví và khoanh giữ số dư khẩn cấp với ngân hàng')">Kiểm soát rủi ro</span>
+  <span class="domain-chip" onclick="quickAsk('Đối soát phí dịch vụ định kỳ và xử lý sai lệch trạng thái giao dịch')">Đối soát phí</span>
+</div>
+
+<!-- Chat area -->
+<div class="chat-wrapper">
+  <div id="messages">
+    <div class="welcome-card">
+      <h2>Xin chào Quý đối tác!</h2>
+      <p>Hệ thống hỗ trợ tự động của ZaloPay sẵn sàng giải đáp các thắc mắc nghiệp vụ. Vui lòng nhập câu hỏi hoặc chọn chủ đề ở trên để bắt đầu.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Input area -->
+<div class="input-area">
+  <textarea
+    id="userInput"
+    placeholder="Nhập câu hỏi của Quý đối tác tại đây..."
+    rows="1"
+    onkeydown="handleKey(event)"
+    oninput="autoResize(this)"
+  ></textarea>
+  <button id="sendBtn" onclick="sendMessage()" title="Gửi">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+    </svg>
+  </button>
+</div>
+
+<script>
+  let sessionId = null;
+
+  // ── Session init ──────────────────────────────────────────────────────────
+  async function initSession() {
+    try {
+      const res = await fetch("/api/session", { method: "POST" });
+      const data = await res.json();
+      sessionId = data.session_id;
+    } catch (e) {
+      console.error("Session init failed:", e);
+    }
+  }
+
+  initSession();
+
+  // ── Send message ──────────────────────────────────────────────────────────
+  async function sendMessage() {
+    const input = document.getElementById("userInput");
+    const text = input.value.trim();
+    if (!text || !sessionId) return;
+
+    input.value = "";
+    autoResize(input);
+    document.getElementById("sendBtn").disabled = true;
+
+    appendMessage("user", text, null);
+    const typingEl = appendTyping();
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, message: text }),
+      });
+      const data = await res.json();
+      typingEl.remove();
+      appendMessage("bot", data.response, data.flow, data.escalated);
+    } catch (e) {
+      typingEl.remove();
+      appendMessage("bot", "Rất tiếc, hệ thống đang gặp sự cố. Quý đối tác vui lòng thử lại sau.", "error", false);
+    }
+
+    document.getElementById("sendBtn").disabled = false;
+    input.focus();
+  }
+
+  // ── Quick ask from domain chips ───────────────────────────────────────────
+  function quickAsk(question) {
+    const input = document.getElementById("userInput");
+    input.value = question;
+    autoResize(input);
+    sendMessage();
+  }
+
+  // ── Append user/bot message ───────────────────────────────────────────────
+  function appendMessage(role, text, flow, escalated) {
+    const messages = document.getElementById("messages");
+    const now = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "message " + role;
+
+    let extraClass = "";
+    let badgeHtml = "";
+
+    if (role === "bot") {
+      if (escalated || flow === "escalated") {
+        extraClass = " escalated";
+        badgeHtml = `<span class="flow-badge badge-escalated">Chuyển nhân viên</span><br>`;
+      } else if (flow === "out_of_scope") {
+        extraClass = " out-of-scope";
+        badgeHtml = `<span class="flow-badge badge-outofscope">Ngoài phạm vi</span><br>`;
+      } else if (flow === "auto_answer") {
+        badgeHtml = `<span class="flow-badge badge-auto">Tự động trả lời</span><br>`;
+      }
+      wrapper.className += extraClass;
+    }
+
+    const avatarText = role === "user" ? "M" : "ZP";
+    const timeStr = `<div class="timestamp">${now}</div>`;
+
+    wrapper.innerHTML = `
+      <div class="avatar">${avatarText}</div>
+      <div>
+        <div class="bubble">${badgeHtml}${escapeHtml(text)}</div>
+        ${timeStr}
+      </div>
+    `;
+
+    messages.appendChild(wrapper);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  // ── Typing indicator ──────────────────────────────────────────────────────
+  function appendTyping() {
+    const messages = document.getElementById("messages");
+    const wrapper = document.createElement("div");
+    wrapper.className = "message bot";
+    wrapper.innerHTML = `
+      <div class="avatar">ZP</div>
+      <div class="typing-indicator">
+        <span></span><span></span><span></span>
+      </div>
+    `;
+    messages.appendChild(wrapper);
+    messages.scrollTop = messages.scrollHeight;
+    return wrapper;
+  }
+
+  // ── Keyboard handler ──────────────────────────────────────────────────────
+  function handleKey(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  // ── Auto-resize textarea ──────────────────────────────────────────────────
+  function autoResize(el) {
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  }
+
+  // ── HTML escape ───────────────────────────────────────────────────────────
+  function escapeHtml(text) {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+</script>
+
+</body>
+</html>
